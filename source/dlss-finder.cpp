@@ -5,7 +5,7 @@
 
 #define MINIMUM_FILESIZE    32000000
 #define ORIGINAL_FILENAME   L"nvngx_dlss.dll"
-#define TARGET_FILENAME     L"nvngx.dll"
+#define TARGET_FILENAME     L"_nvngx.dll"
 #define SEARCH_DEPTH        3
 #define ERROR_CAPTION       L"Fatal Error"
 #define ERRNO_GENERAL_FAIL  99
@@ -18,7 +18,7 @@
 
 namespace fs = std::filesystem;
 
-bool reportSuccess = false; // when set to true, shows the pop-up informing about success
+bool reportSuccess = true;  // when set to true, shows the pop-up informing about success
 bool reportErrors = true;   // when set to false, hides all error pop-ups if operation fails
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -105,8 +105,11 @@ int copyFileToStartingDirectory(const std::wstring& filename) {
     }
     // Check if the file already exists in the starting directory and is not a dummy file (which would be very small in size)
     // We could try to check the file properties instead, but every additional operation on a file may increase the risk of false positives reported by various AVs...
-    if (fs::exists(destination) && std::filesystem::file_size(destination) < MINIMUM_FILESIZE) {
+    if (fs::exists(destination) && std::filesystem::file_size(destination) > MINIMUM_FILESIZE) {
         // Yes, no further steps are needed
+        if (reportSuccess) {
+            MessageBoxW(nullptr, L"DLSS file is already installed", L"Success", MB_ICONINFORMATION);
+        }
         return ERRNO_SUCCESS;
     }
 
@@ -180,14 +183,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::wstring arg(argv[i]);
 
         if (arg == L"/s") {
-            reportSuccess = true;
+            reportSuccess = false;
         }
         else if (arg == L"/q") {
             reportErrors = false;
         }
         else {
             // Show error window and the invalid argument
-            return ShowErrorMessage((L"Invalid argument detected: " + arg + L"\r\n\r\nAvailable arguments:\r\n/q - do not report errors\r\n/s  - report success").c_str(), ERRNO_INV_ARG);
+            return ShowErrorMessage((L"Invalid argument detected: " + arg + L"\r\n\r\nAvailable arguments:\r\n/q - do not report errors\r\n/s  - do not report success").c_str(), ERRNO_INV_ARG);
         }
     }
 
